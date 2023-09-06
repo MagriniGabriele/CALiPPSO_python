@@ -36,7 +36,7 @@ def my_calippso(spheres, tolerances, volume,dim):
         model = gp.Model("MyLPModel")
 
         # Set Info visible about unbounded rays - OPTIONAL FOR DEBUGGING
-        #model.setParam("InfUnbdInfo", 1)
+        model.setParam("InfUnbdInfo", 1)
 
         # Setting the barrier method as in the original paper is suggested
         model.setParam('Method', 2)
