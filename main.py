@@ -17,7 +17,7 @@ def main():
     # Generate a random initial configuration of particles.
     container_size = 1
     num_spheres =  args.num_spheres
-    radius = args.radius
+    radius = 0.1
     if(args.plot == 1):
         plot = True
     else:
