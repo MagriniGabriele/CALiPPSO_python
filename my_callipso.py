@@ -4,6 +4,7 @@ from gurobipy import GRB
 import numpy as np
 import math
 
+# THIS FILE IS DEPRECATED - USE MY_CALLIPSO_REMAKE.PY INSTEAD
 #
 # This function implements the CALiPPSO algorithm
 #
