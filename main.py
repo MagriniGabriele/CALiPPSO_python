@@ -11,7 +11,7 @@ def main():
     # Add arguments with default values
     parser.add_argument('--container_size', default=1, help='Size of the container')
     parser.add_argument('--radius', default=0.1, help='Radius of the spheres')
-    parser.add_argument('--num_spheres', default=16, help='Number of spheres to generate and jam')
+    parser.add_argument('--num_spheres', default=15, help='Number of spheres to generate and jam')
     parser.add_argument('--plot', default=True, help='Whether to plot the initial and final configurations')
     parser.add_argument('--debug', default=False, help='To print info necessary for debugging')
     parser.add_argument('--max_iter', default=1000, help='Maximum number of iterations for the algorithm')
