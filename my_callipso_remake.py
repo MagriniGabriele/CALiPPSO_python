@@ -14,8 +14,9 @@ import math
 #               the second one is the tolerance for the density - not used here, we adopt the furobi default ones
 #   -volume: the volume of the container
 #   -dim: the dimension of the system
+#   -debug: whether to print info for debugging
 #
-def my_calippso(spheres, tolerances, volume,dim):
+def my_calippso(spheres, volume, dim = 2 , debug = False, max_iter = 1000):
     
     # Compute initial density, phi and cutoff l(phi)
     dens = utils.compute_density(dim, spheres, volume)
@@ -63,12 +64,10 @@ def my_calippso(spheres, tolerances, volume,dim):
         for i in range(d):
             for j in range(num_spheres):
                 S[i,j] = model.addVar(name=f"S[{i}, {j}]", lb=-sbound, ub=sbound)
-        
-        #S = model.addVars((d), (num_spheres), name="S", lb=-sbound, ub=sbound)
+
         # Create a variable for gamma - here, all the spheres will share the same gamma as in the paper and julia code
         gamma = model.addVar(name="Gamma", lb=1)
 
-        
         # Construct the neighbours lists
         neighbours_lists = []
         for i in range(num_spheres):
@@ -102,47 +101,51 @@ def my_calippso(spheres, tolerances, volume,dim):
                             # Finally, add the constraint to the model
                             model.addConstr( -2* np.dot(centre_dist ,var_diff) + gamma*(radius_diff)**2  <= (np.linalg.norm(centre_dist)**2), name=f"{i,j}")
 
-                        # Now we add the closed boundaries constraints 
-                        for k in range(d):
-                            dim_constraint =  S[k,i] + spheres[i].get_coordinates()[k]
-                            model.addConstr(dim_constraint <= 1, name=f"Constraint_{i,k}_a_sbound")
-                            model.addConstr(dim_constraint >= 0, name=f"Constraint_{i,k}_b_sbound")
+                    # Now we add the closed boundaries constraints 
+                    for k in range(d):
+                        dim_constraint =  S[k,i] + spheres[i].get_coordinates()[k]
+                        model.addConstr(dim_constraint <= volume, name=f"Constraint_{i,k}_a_sbound")
+                        model.addConstr(dim_constraint >= 0, name=f"Constraint_{i,k}_b_sbound")
                             
         # Print the number of constraints
         print("Number of constraints:", model.NumConstrs)
-
+        
         # Set the objective to maximize gamma
         model.setObjective(gamma, GRB.MAXIMIZE)
 
         # Optimize the model
         model.optimize()
 
-        print("Model STATUS ",model.status)
+        if(debug == True):
+            for i in range(model.NumConstrs):
+                print("Constraint", i, "name:", model.getConstrs()[i].ConstrName)
 
-        # Check if the model is infeasible
-        if model.status == GRB.INFEASIBLE:
-            print("The model is infeasible")
-            #print(model.computeIIS())
-            #model.feasRelaxS(0, False, True, True)
-            #model.optimize()
-            return spheres
-        if model.status == GRB.UNBOUNDED:
-            print("The model is unbounded")
-            unbounded_ray = model.unbdRay
-            print("Unbounded ray:", unbounded_ray)
-            return spheres
+        if(debug == True):
+            # Print the model status
+            print("Model STATUS ",model.status)
+            
+            # Check if the model is infeasible
+            if model.status == GRB.INFEASIBLE:
+                print("The model is infeasible")
+                return spheres
+            if model.status == GRB.UNBOUNDED:
+                print("The model is unbounded")
+                unbounded_ray = model.unbdRay
+                print("Unbounded ray:", unbounded_ray)
+                return spheres
         
         # Get the optimal gamma and S values
         optimal_gamma = gamma.X
         optimal_S = {(i, j): S[i, j].X for i in range(d) for j in range(num_spheres)}
-
-        # Print the results
-        print("Optimal gamma:", optimal_gamma)
         
-        print("Optimal values for S:")
-        for i in range(d):
-            for j in range(num_spheres):
-                print(f"S[{i}, {j}]: {optimal_S[(i, j)]}")
+        if(debug == True):
+            # Print the results
+            print("Optimal gamma:", optimal_gamma)
+            
+            print("Optimal values for S:")
+            for i in range(d):
+                for j in range(num_spheres):
+                    print(f"S[{i}, {j}]: {optimal_S[(i, j)]}")
 
         # Update particles' positions
         for i in range(num_spheres):
@@ -172,15 +175,20 @@ def my_calippso(spheres, tolerances, volume,dim):
             dual_value = constr.Pi
             if dual_value != 0.0:
                 non_zero_dual_indices.append(i)
-                print(f"Index {i} has a non-zero dual value: {i}")
+                if(debug == True):
+                    print(f"Index {i} has a non-zero dual value: {i}")
         # And save the values of the duals
         duals = [model.getConstrs()[i].Pi for i in non_zero_dual_indices]
         #print("Duals:", duals)
 
         max_Si = max(optimal_S.values())
-        if (math.sqrt(optimal_gamma) - 1 <= 0.000000000001) and (max_Si <= 0.0000001) or iter == 1000:
+        if (math.sqrt(optimal_gamma) - 1 <= 0.000000000001) and (max_Si <= 0.0000001) or iter == max_iter:
             # As suggested in the original julia code, we dispose of the opt model and re-create it afresh for the next iteration
             converged = True
+            if(iter == max_iter):
+                print("\n")
+                print("!!!!! Maximum number of iterations reached !!!!!")
+                print("\n")
         else:
             model.dispose()
     
@@ -188,7 +196,7 @@ def my_calippso(spheres, tolerances, volume,dim):
     jammed_config = spheres
 
     # And finally, we compute the contact vectors and force magnitudes
-    """
+    
     contact_vects = []
     force_magnitudes = []
     if len(non_zero_dual_indices) == 0:
@@ -197,20 +205,21 @@ def my_calippso(spheres, tolerances, volume,dim):
     else:
         print("Contacts found")
         for couple in non_zero_dual_indices:
-            print("Couple:", couple)
-            print("Couple name:", model.getConstrs()[couple].ConstrName)
-            i,j = model.getConstrs()[couple].ConstrName.split("_")[0].split(",")
-            i = int(i[1])
-            j = int(j[1])
-            #print("i:", i)
-            #print("j:", j)
-            coord_diff = utils.compute_alt(spheres[i], spheres[j])
-            radius_diff = (spheres[i].get_diameter() + spheres[j].get_diameter())/2
-            contact_vects.append(np.array(coord_diff)/radius_diff)
-            index_non_zero = non_zero_dual_indices.index(couple)
-            force_magnitudes.append(duals[index_non_zero]/radius_diff)
+            if(debug == True):
+                print("Couple:", couple)
+                print("Couple name:", model.getConstrs()[couple].ConstrName)
+                print("first char:", model.getConstrs()[couple].ConstrName[0])
+            if(model.getConstrs()[couple].ConstrName[0] == "("):
+                i,j = model.getConstrs()[couple].ConstrName.split("_")[0].split(",")
+                i = int(i[1])
+                j = int(j[1])
+                coord_diff = utils.compute_alt(spheres[i], spheres[j])
+                radius_diff = (spheres[i].get_diameter() + spheres[j].get_diameter())/2
+                contact_vects.append(np.array(coord_diff)/radius_diff)
+                index_non_zero = non_zero_dual_indices.index(couple)
+                force_magnitudes.append(duals[index_non_zero]/radius_diff)
     
     return jammed_config, contact_vects, force_magnitudes
-    """
+    
 
-    return jammed_config
+    #return jammed_config

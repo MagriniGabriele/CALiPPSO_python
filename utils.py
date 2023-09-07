@@ -45,17 +45,10 @@ def bounds_and_cutoff(sqr_gamma, radius, l0, d, thresholds=(5e-4, 1e-5), sbound=
 
     if (sqr_gamma > 1 + th1):
         s_bound = (0.5 * l0 - max(1.5, sqr_gamma) * radius) / (d ** 0.5)
-        print("A CHOICE")
-        print("Sbound:", s_bound)
-        print("l0:", l0)
         return l0, s_bound
     elif (th1 >= sqr_gamma - 1 > th2):
-        print("B CHOICE")
-        print("Sbound:", sbound)
         return min(4 * radius, l0), 0.1 * radius
     else:
-        print("C CHOICE")
-        print("Sbound:", sbound)
         return min(2.7 * radius, l0), sbound * radius
     
 
@@ -68,11 +61,19 @@ def check_overlap(new_sphere, existing_spheres, radius):
 
 # This function generates a random packing of spheres in a container of size "container_size"
 # NB: this works through rejection sampling, so it might take a while to generate a packing
-def generate_packing(num_spheres, radius, container_size):
+def generate_packing(num_spheres, radius, container_size, num_try=0):
+    if num_try > 100:
+        print("Too many tries, exiting. Try with a smaller number of spheres or a bigger container size!")
+        exit()
+    # Reset after too many iterations
     spheres = []
     for _ in range(num_spheres):
         new_sphere = np.random.rand(2) * (container_size - 2 * radius) + radius
+        iterations = 0
         while check_overlap(new_sphere, spheres, radius):
+            iterations += 1
+            if iterations > 1000:
+                return generate_packing(num_spheres, radius, container_size, num_try + 1)
             new_sphere = np.random.rand(2) * (container_size - 2 * radius) + radius
         spheres.append(new_sphere)
     return spheres
