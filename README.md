@@ -1,7 +1,7 @@
 # CALiPPSO.py - Jamming Hard Spheres in Python
 This is a draft of the python version of "CALiPPSO.jl: A Linear Programming Algorithm for Jamming Hard Spheres".
 </br>
-At the moment, the 2d version has been tested(while still not optimally working), while the 3d version is usable only up to the creation of the pre-jammed enviroment.
+ At the moment, the 2d version has been tested and working, with the 3d version on the way.
 
 ## Installation
 The code is written in Python 3.11.4 and requires the following packages:
@@ -30,4 +30,7 @@ followed by these possible options:
 
 * `--num_spheres`: Number of spheres to generate and jam (default=5)
 * `--plot`: Whether to plot the initial and final configurations (default=1, 0 to disable)
-
+* `--debug`: To print info necessary for debugging (default=0, 1 to enable)
+* `--max_iter`: Maximum number of iterations for the algorithm (default=1000)
+* `--radius`: Radius of the spheres (default=0.1)
+* `--container_size`: Size of the container (default=1)
