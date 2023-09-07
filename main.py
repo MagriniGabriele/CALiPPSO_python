@@ -1,5 +1,6 @@
 import utils
 import my_callipso
+import my_callipso_remake
 import spheres
 import argparse
 
@@ -8,7 +9,7 @@ def main():
     parser = argparse.ArgumentParser(description="CALiPPSO for python!")
 
     # Add arguments with default values
-    parser.add_argument('--num_spheres', default=5, help='Number of spheres to generate and jam')
+    parser.add_argument('--num_spheres', default=15, help='Number of spheres to generate and jam')
     parser.add_argument('--plot', default=True, help='Whether to plot the initial and final configurations')
 
     # Parse the command-line arguments
@@ -43,7 +44,8 @@ def main():
         utils.visualize_packing(sphere_list, container_size)
 
     # Producing a jammed configuration
-    new_spheres, contact_vect, force_magnitude = my_callipso.my_calippso(sphere_list, [0.0000000001, 0.001], 1, 2)
+    #new_spheres, contact_vect, force_magnitude = my_callipso.my_calippso(sphere_list, [0.0000000001, 0.001], 1, 2)
+    new_spheres= my_callipso_remake.my_calippso(sphere_list, [0.0000000001, 0.001], 1, 2)
 
     # Now collect the coordinates of the spheres
     packing = []

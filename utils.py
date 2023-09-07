@@ -45,10 +45,17 @@ def bounds_and_cutoff(sqr_gamma, radius, l0, d, thresholds=(5e-4, 1e-5), sbound=
 
     if (sqr_gamma > 1 + th1):
         s_bound = (0.5 * l0 - max(1.5, sqr_gamma) * radius) / (d ** 0.5)
+        print("A CHOICE")
+        print("Sbound:", s_bound)
+        print("l0:", l0)
         return l0, s_bound
     elif (th1 >= sqr_gamma - 1 > th2):
+        print("B CHOICE")
+        print("Sbound:", sbound)
         return min(4 * radius, l0), 0.1 * radius
     else:
+        print("C CHOICE")
+        print("Sbound:", sbound)
         return min(2.7 * radius, l0), sbound * radius
     
 

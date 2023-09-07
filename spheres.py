@@ -5,26 +5,18 @@ import utils
 # TODO: maybe implement a neighbour list for each sphere?
 class Sphere:
 
-    def __init__(self, radius, x = None, y=None, z = None):
+    def __init__(self, radius, x = None, y=None):
         self.radius = radius
         self.x = x
         self.y = y
-        self.z = z
         self.diameter = 2*radius
-        list_coord = [x,y,z]
-        # Remove the None values from the list - in this case, to remove 
-        # the non-used dimensions out of the 3 possible
-        list_coord = utils.remove_none(list_coord)
-        self.coordinates = np.array(list_coord)
+        self.coordinates = np.array([x,y])
     
     def get_x(self):
-        return self.x
+        return self.coordinates[0]
     
     def get_y(self):
-        return self.y
-    
-    def get_z(self):
-        return self.z
+        return self.coordinates[1]
     
     def get_radius(self):
         return self.radius

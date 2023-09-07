@@ -43,10 +43,15 @@ def my_calippso(spheres, tolerances, volume,dim):
 
         # If sbound is too small, set it to 0.01 to avoid numerical issues and instabilities
         print("Sbound:", sbound)
-        sbound = 0.01
+        #sbound = 0.01
         # Create decision variables S[i, j] for i in range(d) and j in range(n) (a matrix of size d x n)
-    
-        S = model.addVars((d), (num_spheres), name="S", lb=-sbound, ub=sbound)
+        S = {}
+        for i in range(d):
+            for j in range(num_spheres):
+                S[i,j] = model.addVar(name=f"S[{i}, {j}]", lb=-sbound, ub=sbound)
+        
+        
+        #S = model.addVars((d), (num_spheres), name="S", lb=-sbound, ub=sbound)
         # Create a variable for gamma - here, all the spheres will share the same gamma as in the paper and julia code
         gamma = model.addVar(name="Gamma", lb=1)
 
@@ -58,13 +63,14 @@ def my_calippso(spheres, tolerances, volume,dim):
             for j in range(num_spheres):
                 if i != j:
                     # Compute the distance between the two spheres to check if they are neighbours
-                    dist_vect = utils.compute_distance(spheres[i], spheres[j], 1)
+                    dist_vect = utils.compute_alt(spheres[i], spheres[j])
                     dist = np.linalg.norm(dist_vect)
                     if dist <= cutoff:
                         neighbours_i.append(j)
             neighbours_lists.append(neighbours_i)
 
         # Print the neighbours lists and add the constraints
+        
         print("Neighbours lists:", neighbours_lists)
         for i in range(num_spheres):
                     for j in ((neighbours_lists[i])):
@@ -81,9 +87,11 @@ def my_calippso(spheres, tolerances, volume,dim):
                             var_diff = [S[0,i]-S[0,j], S[1,i]-S[1,j]]
                             
                             #Define constraints
-                            constraint_expr = -2* np.dot(centre_dist ,var_diff) + gamma*(radius_diff)**2 - np.linalg.norm(centre_dist)**2
+                            #constraint_expr = -2* np.dot(centre_dist ,var_diff) + gamma*(radius_diff)**2 - np.linalg.norm(centre_dist)**2
+
+                            
                             # Finally, add the constraint to the model
-                            model.addConstr(constraint_expr <= 0, name=f"{i,j}")
+                            model.addConstr( -2* np.dot(centre_dist ,var_diff) + gamma*(radius_diff)**2  <= (np.linalg.norm(centre_dist)**2), name=f"{i,j}")
 
                             # Now we add the closed boundaries constraints ( As explained at the end of page 3 in the original paper )
                             
@@ -91,7 +99,9 @@ def my_calippso(spheres, tolerances, volume,dim):
                                 dim_constraint =  S[k,i] + spheres[i].get_coordinates()[k]
                                 model.addConstr(dim_constraint <= 1, name=f"Constraint_{i}_sbound")
                                 model.addConstr(dim_constraint >= 0, name=f"Constraint_{i}_sbound")
-
+                            
+        #model.update()
+        print("Number of constraints:", model.NumConstrs)
         # Set the objective to maximize gamma
         model.setObjective(gamma, GRB.MAXIMIZE)
 
@@ -103,6 +113,9 @@ def my_calippso(spheres, tolerances, volume,dim):
         # Check if the model is infeasible
         if model.status == GRB.INFEASIBLE:
             print("The model is infeasible")
+            print(model.computeIIS())
+            model.feasRelaxS(0, False, True, True)
+            model.optimize()
             return spheres
         if model.status == GRB.UNBOUNDED:
             print("The model is unbounded")
@@ -116,12 +129,12 @@ def my_calippso(spheres, tolerances, volume,dim):
 
         # Print the results
         print("Optimal gamma:", optimal_gamma)
-        """
+        
         print("Optimal values for S:")
         for i in range(d):
             for j in range(num_spheres):
                 print(f"S[{i}, {j}]: {optimal_S[(i, j)]}")
-
+        """
         for i, constr in enumerate(model.getConstrs()):
             print(f"Constraint {i + 1}: {constr.ConstrName}")
         """
@@ -131,12 +144,19 @@ def my_calippso(spheres, tolerances, volume,dim):
         # Update particles' positions
         for i in range(num_spheres):
             for j in range(d):
-                spheres[i].coordinates[j] += optimal_S[(j, i)]
+                spheres[i].coordinates[j] += optimal_S[j,i]
+            spheres[i].x = spheres[i].coordinates[0]
+            spheres[i].y = spheres[i].coordinates[1]   
+        """
+        print(spheres[i].coordinates)
+        print(spheres[i].x)     
+        print(spheres[i].y)
+        """
 
         # Update radius
         for i in range(num_spheres):
-            spheres[i].diameter = spheres[i].diameter * math.sqrt(optimal_gamma)
-            spheres[i].radius = spheres[i].diameter/2
+            spheres[i].radius = spheres[i].radius * math.sqrt(optimal_gamma)
+            spheres[i].diameter = spheres[i].radius*2
 
 
         # Updating the cutoff, density and new bounds
@@ -160,7 +180,7 @@ def my_calippso(spheres, tolerances, volume,dim):
         print("Duals:", duals)
 
         max_Si = max(optimal_S.values())
-        if (math.sqrt(optimal_gamma) - 1 <= 0.000000000001) and (max_Si <= 0.00001):
+        if (math.sqrt(optimal_gamma) - 1 <= 0.000000000001) and (max_Si <= 0.0000001):
             # As suggested in the original julia code, we dispose of the opt model and re-create it afresh for the next iteration
             converged = True
         else:
@@ -170,7 +190,7 @@ def my_calippso(spheres, tolerances, volume,dim):
     jammed_config = spheres
 
     # And finally, we compute the contact vectors and force magnitudes
-    
+
     contact_vects = []
     force_magnitudes = []
     if len(non_zero_dual_indices) == 0:
@@ -179,6 +199,7 @@ def my_calippso(spheres, tolerances, volume,dim):
     else:
         print("Contacts found")
         for couple in non_zero_dual_indices:
+            print("Couple:", couple)
             i,j = model.getConstrs()[couple].ConstrName.split("_")[0].split(",")
             i = int(i[1])
             j = int(j[1])
