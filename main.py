@@ -9,27 +9,29 @@ def main():
     parser = argparse.ArgumentParser(description="CALiPPSO for python!")
 
     # Add arguments with default values
-    parser.add_argument('--num_spheres', default=15, help='Number of spheres to generate and jam')
+    parser.add_argument('--container_size', default=1, help='Size of the container')
+    parser.add_argument('--radius', default=0.1, help='Radius of the spheres')
+    parser.add_argument('--num_spheres', default=10, help='Number of spheres to generate and jam')
     parser.add_argument('--plot', default=True, help='Whether to plot the initial and final configurations')
 
     # Parse the command-line arguments
     args = parser.parse_args()
     
     # Generate a random initial configuration of particles.
-    container_size = 1
+    container_size = args.container_size
     num_spheres =  args.num_spheres
-    radius = 0.1
+    radius = args.radius
     if(args.plot == 1):
         plot = True
     else:
         plot = False
-        
 
     # Printing info about the parameters
     #print("Container size:", container_size)
     print("Number of spheres:", num_spheres)
     print("Radius:",radius)
     print("Plot:", plot)
+    print("Container size:", container_size)
 
     # Generate a random initial configuration of particles
     packing = utils.generate_packing(num_spheres, radius, container_size)
@@ -51,6 +53,8 @@ def main():
     packing = []
     for i in range(len(new_spheres)):   
         packing.append(new_spheres[i].get_coordinates())
+    for i in range(len(sphere_list)):
+            print("Sphere", i, "coordinates:", sphere_list[i].get_coordinates())
 
     # Visualize the final configuration
     if plot:
