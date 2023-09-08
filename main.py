@@ -22,9 +22,9 @@ def main():
     # Generate a random initial configuration of particles.
     container_size = int(args.container_size)
     num_spheres =  int(args.num_spheres)
-    radius = args.radius
+    radius = float(args.radius)
     debug = args.debug
-    max_iter = args.max_iter
+    max_iter = int(args.max_iter)
     if(args.plot == 1):
         plot = True
     else:
@@ -51,7 +51,7 @@ def main():
 
     # Check the initial density - if it is too low, warn the user
     initial_density = utils.compute_density(2, sphere_list, container_size)
-    if(initial_density < 0.4):
+    if(initial_density < 0.5):
         print(f"Warning!!! Initial density({initial_density}) is too low, convergence may be slow and not assured")
         print("\n")
         print("Want to continue? (y/n)")
