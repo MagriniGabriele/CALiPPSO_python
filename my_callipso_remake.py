@@ -221,5 +221,3 @@ def my_calippso(spheres, volume, dim = 2 , debug = False, max_iter = 1000):
     
     return jammed_config, contact_vects, force_magnitudes
     
-
-    #return jammed_config
